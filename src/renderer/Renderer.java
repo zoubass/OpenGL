@@ -38,9 +38,9 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 	@Override
 	public void init(GLAutoDrawable drawable) {
 		GL2 gl = drawable.getGL().getGL2();
-		position = new Vec3D(1, -5, 10);
-		view = new Vec3D(1, 1, 1);
-		u = new Vec3D(0, 1, 0);
+		// position = new Vec3D(1, -5, 10);
+		// view = new Vec3D(1, 1, 1);
+		// u = new Vec3D(0, 1, 0);
 		gl.glEnable(GL2.GL_DEPTH_TEST);
 		gl.glFrontFace(GL2.GL_CCW);
 		gl.glPolygonMode(GL2.GL_FRONT, GL2.GL_FILL);
@@ -52,6 +52,7 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 		createMillWheel(gl);
 		// modelovani domu
 		createMainBuilding(gl);
+		createRockWall(gl);
 	}
 
 	@Override
@@ -72,7 +73,9 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 
 		gl.glMatrixMode(GL2.GL_MODELVIEW);
 		gl.glLoadIdentity();
-		glu.gluLookAt(position.x, position.y, position.z, view.x, view.y, view.z, u.x, u.y, u.z);
+		// glu.gluLookAt(50, 0, 0, 0, 0, 0, 0, 0, 1);
+		// glu.gluLookAt(position.x, position.y, position.z, view.x, view.y,
+		// view.z, u.x, u.y, u.z);
 
 		setCameraAngles();
 
@@ -80,20 +83,19 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 		gl.glRotated(zenit - 90, 1, 0, 0);
 		gl.glRotated(azimut, 0, 0, 1);
 
-		createGround(gl);
-
+		// createGround(gl);
+		gl.glPushMatrix();
 		gl.glRotated(alpha, 0, 1, 0);
-		// zavoláni vykresleni kola
-		// gl.glCallList(1);
+		// vykresleni mlynskeho kola
+		gl.glCallList(1);
 		gl.glPopMatrix();
-		// zavolání vykresleni hlavni budovy
+		// vykresleni hlavni budovy
 		gl.glCallList(2);
 
 		// gl.glColor3f(1.0f, 1.0f, 1.0f);
 		gl.glDisable(GL2.GL_DEPTH_TEST);
-		// String text = new String(this.getClass().getName() + ": [lmb] move,
-		// ");
-
+		String legend = "[m] spin the wheel";
+		OglUtils.drawStr2D(drawable, 3, height - 20, legend);
 	}
 
 	private void createGround(GL2 gl) {
@@ -186,21 +188,68 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 		gl.glNewList(2, GL2.GL_COMPILE);
 		gl.glMatrixMode(GL2.GL_MODELVIEW);
 		gl.glPushMatrix();
-		gl.glTranslatef(0f, 0f, 0f);
+		gl.glTranslatef(0f, -22.5f, 10f);
 		gl.glColor3f(0, 1f, 0);
-		gl.glScalef(15f, 20f, 10f);
-		
-		glut.glutSolidCube(1);
+		gl.glScalef(15f, 18f, 15f);
+		// base
+		glut.glutSolidCube(2);
+		gl.glPopMatrix();
+
+		// roof
+		// for (int i = -1; i < 1; i += 2) {
+		gl.glPushMatrix();
 		gl.glColor3f(1f, 1f, 1f);
-		gl.glTranslatef(0f, 0f, 0f);
-		gl.glBegin(GL2.GL_QUADS);
-		// gl.glVertex3f(-200.0f, -200.0f, 0.0f);
-		// gl.glVertex3f(-200.0f, 200.0f, 0.0f);
-		// gl.glVertex3f(200.0f, 200.0f, 0.0f);
-		// gl.glVertex3f(200.0f, -200.0f, 0.0f);
+		// front side of the roof
+		for (int i = -1; i <= 1; i += 2) {
+			gl.glBegin(GL2.GL_TRIANGLES);
+			gl.glVertex3f((16 * -i), (i != 1) ? -4f : -41f, 24f);
+			gl.glVertex3f((16 * i), (i != 1) ? -4f : -41f, 24f);
+			gl.glVertex3f(0f, (i != 1) ? -4f : -41f, 45f);
+			gl.glEnd();
+		
+			// sides of the roof
+			gl.glBegin(GL2.GL_QUADS);
+			gl.glVertex3f((16 * i), (i == 1) ? -42f : -3f, 24f);
+			gl.glVertex3f((16 * i), (i == 1) ? -3f : -42f, 24f);
+			gl.glVertex3f(0f, (i == 1) ? -3f : -42f, 45f);
+			gl.glVertex3f(0f, (i == 1) ? -42f : -3f, 45f);
+			gl.glEnd();
+		}
+//		gl.glBegin(GL2.GL_QUADS);
+//		gl.glVertex3f(-16f, -3f, 24f);
+//		gl.glVertex3f(-16f, -42f, 24f);
+//		gl.glVertex3f(0f, -42f, 45f);
+//		gl.glVertex3f(0f, -3f, 45f);
+//		gl.glEnd();
+		
+		
+		// komin
+		gl.glPushMatrix();
+		gl.glColor3f(1f, 0f, 0f);
+		gl.glTranslatef(7.5f, -35f, 35f);
+		gl.glScalef(2f, 2f, 4f);
+		glut.glutSolidCube(2);
+		gl.glPopMatrix();
+		
 		gl.glPopMatrix();
 		gl.glEndList();
 
+	}
+
+	private void createRockWall(GL2 gl) {
+		gl.glNewList(3, GL2.GL_COMPILE);
+		gl.glMatrixMode(GL2.GL_MODELVIEW);
+		gl.glPushMatrix();
+
+		gl.glTranslatef(0f, 2f, 0f);
+		gl.glColor3f(1f, 1f, 1f);
+		gl.glScalef(5f, 5f, 10f);
+		glut.glutSolidCube(1);
+
+		gl.glColor3f(1f, 1f, 1f);
+
+		gl.glPopMatrix();
+		gl.glEndList();
 	}
 
 	@Override
@@ -210,16 +259,16 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 			animate = !animate;
 			break;
 		case KeyEvent.VK_W:
-			position.x += view.x * step;
-			position.y += view.y * step;
-			position.z += view.z * step;
+			// position.x += view.x * step;
+			// position.y += view.y * step;
+			// position.z += view.z * step;
 			break;
 		case KeyEvent.VK_S:
 
 			break;
 		case KeyEvent.VK_A:
-			position.z -= (Math.cos(azimut - 90)) * step;
-			position.x += (Math.sin(azimut - 90)) * step;
+			// position.z -= (Math.cos(azimut - 90)) * step;
+			// position.x += (Math.sin(azimut - 90)) * step;
 			break;
 		case KeyEvent.VK_D:
 
