@@ -5,12 +5,20 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLEventListener;
+import com.jogamp.opengl.GLException;
 import com.jogamp.opengl.glu.GLU;
+import com.jogamp.opengl.glu.GLUquadric;
 import com.jogamp.opengl.util.gl2.GLUT;
+import com.jogamp.opengl.util.texture.Texture;
+import com.jogamp.opengl.util.texture.TextureIO;
 
 import transforms.Vec3D;
 import utils.OglUtils;
@@ -35,6 +43,10 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 
 	private float alpha = 0;
 
+	List<Texture> textures;
+
+	GLUquadric quadratic;
+
 	@Override
 	public void init(GLAutoDrawable drawable) {
 		GL2 gl = drawable.getGL().getGL2();
@@ -44,15 +56,38 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 		gl.glEnable(GL2.GL_DEPTH_TEST);
 		gl.glFrontFace(GL2.GL_CCW);
 		gl.glPolygonMode(GL2.GL_FRONT, GL2.GL_FILL);
-		gl.glPolygonMode(GL2.GL_BACK, GL2.GL_LINE);
+		gl.glPolygonMode(GL2.GL_BACK, GL2.GL_FILL);
 
 		OglUtils.printOGLparameters(gl);
+		textures = new ArrayList<Texture>();
 
 		// modelovani mlynskeho kola
 		createMillWheel(gl);
 		// modelovani domu
 		createMainBuilding(gl);
-		createRockWall(gl);
+		// createRockWall(gl);
+		// textures.add(loadTexture("rock_wall"));
+		// textures.add(loadTexture("roof"));
+
+		// quadratic = glu.gluNewQuadric(); // nova kvadrika
+		// glu.gluQuadricNormals(quadratic, GLU.GLU_SMOOTH); // normaly pro
+		// // stinovani
+		// glu.gluQuadricTexture(quadratic, true); // souradnice do textury
+	}
+
+	private Texture loadTexture(String name) {
+		InputStream is = getClass().getResourceAsStream("../" + name + ".jpg");
+		Texture texture = null;
+		if (is == null) {
+			System.out.println(String.format("File %s.jpg not found", name));
+		} else {
+			try {
+				texture = TextureIO.newTexture(is, true, "jpg");
+			} catch (GLException | IOException e) {
+				System.err.println(String.format("Failed to load image with name %s.", name));
+			}
+		}
+		return texture;
 	}
 
 	@Override
@@ -78,6 +113,12 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 		// view.z, u.x, u.y, u.z);
 
 		setCameraAngles();
+		gl.glEnable(GL2.GL_TEXTURE_2D);
+		gl.glDisable(GL2.GL_LIGHTING);
+
+		gl.glTexParameteri(GL2.GL_TEXTURE_2D, GL2.GL_TEXTURE_WRAP_T, GL2.GL_REPEAT);
+		gl.glTexParameteri(GL2.GL_TEXTURE_2D, GL2.GL_TEXTURE_WRAP_S, GL2.GL_REPEAT);
+		gl.glTexEnvi(GL2.GL_TEXTURE_ENV, GL2.GL_TEXTURE_ENV_MODE, GL2.GL_REPLACE);
 
 		gl.glTranslatef(0f, 0f, -100f);
 		gl.glRotated(zenit - 90, 1, 0, 0);
@@ -86,11 +127,18 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 		// createGround(gl);
 		gl.glPushMatrix();
 		gl.glRotated(alpha, 0, 1, 0);
+
+		gl.glMatrixMode(GL2.GL_TEXTURE);
+		gl.glLoadIdentity();
+
+		gl.glMatrixMode(GL2.GL_MODELVIEW);
 		// vykresleni mlynskeho kola
 		gl.glCallList(1);
 		gl.glPopMatrix();
 		// vykresleni hlavni budovy
 		gl.glCallList(2);
+		gl.glCallList(3);
+		gl.glDisable(GL2.GL_TEXTURE_2D);
 
 		// gl.glColor3f(1.0f, 1.0f, 1.0f);
 		gl.glDisable(GL2.GL_DEPTH_TEST);
@@ -141,8 +189,12 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 			gl.glRotatef(45, 0, 0, 1);
 			gl.glPushMatrix();
 			gl.glColor3f(1f, 0, 0);
-			gl.glScalef(0.1f, 1.5f, 0f);
-			glut.glutSolidCube(13);
+			gl.glBegin(GL2.GL_QUADS);
+			gl.glVertex3f(-10, -0.75f, 0.2f);
+			gl.glVertex3f(10, -0.75f, 0.2f);
+			gl.glVertex3f(10, 0.75f, 0.2f);
+			gl.glVertex3f(-10, 0.75f, 0.2f);
+			gl.glEnd();
 			gl.glPopMatrix();
 		}
 
@@ -175,9 +227,19 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 			gl.glRotatef(22.5f, 0f, 0f, 1);
 			gl.glTranslatef(0, 4f, 0);
 			gl.glPushMatrix();
+			gl.glTranslatef(0f, 0f, 0.75f);
 			gl.glColor3f(1f, 0f, 0f);
-			gl.glScalef(0.14f, 0f, 0.08f);
-			glut.glutSolidCube(15);
+			gl.glBegin(GL2.GL_QUADS);
+
+			gl.glVertex3f(-21.0f, 0.0f, -1.3f);
+			gl.glVertex3f(-19.0f, 0.0f, -1.3f);
+			gl.glVertex3f(-19.0f, 0.0f, 0.0f);
+			gl.glVertex3f(-21.0f, 0.0f, 0.0f);
+
+			gl.glEnd();
+
+			// gl.glScalef(0.14f, 0f, 0.08f);
+			// glut.glutSolidCube(15);
 			gl.glPopMatrix();
 		}
 		gl.glPopMatrix();
@@ -188,17 +250,52 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 		gl.glNewList(2, GL2.GL_COMPILE);
 		gl.glMatrixMode(GL2.GL_MODELVIEW);
 		gl.glPushMatrix();
-		gl.glTranslatef(0f, -22.5f, 10f);
+		// gl.glTranslatef(0f, -22.5f, 10f);
 		gl.glColor3f(0, 1f, 0);
-		gl.glScalef(15f, 18f, 15f);
+		// gl.glScalef(15f, 18f, 15f);
+
+		// gl.glEnable(GL2.GL_TEXTURE_GEN_S); //enable texture coordinate
+		// generation
+		// gl.glEnable(GL2.GL_TEXTURE_GEN_T);
+		// gl.glBindTexture(GL2.GL_TEXTURE_3D, 1);
+
+		gl.glTranslatef(0f, -5f, -6f);
 		// base
-		glut.glutSolidCube(2);
+		gl.glBegin(GL2.GL_QUADS);
+		//wheel side
+		gl.glVertex3f(-15f, 0f, 0f);
+		gl.glVertex3f(15f, 0f, 0f);
+		gl.glVertex3f(15f, 0, 31f);
+		gl.glVertex3f(-15f, 0, 31f);
+		//back side
+		gl.glVertex3f(-15f, -35f, 0f);
+		gl.glVertex3f(15f, -35f, 0f);
+		gl.glVertex3f(15f, -35f, 31f);
+		gl.glVertex3f(-15f, -35f, 31f);
+		
+		//left
+		gl.glColor3f(1f, 0f, 0f);
+		gl.glVertex3f(-15, -35f, 0f);
+		gl.glVertex3f(-15f, 0f, 0f);
+		gl.glVertex3f(-15f, 0, 31f);
+		gl.glVertex3f(-15f, -35, 31f);
+		//right
+		gl.glVertex3f(15f, -35f, 0f);
+		gl.glVertex3f(15f, 0f, 0f);
+		gl.glVertex3f(15f, 0, 31f);
+		gl.glVertex3f(15f, -35, 31f);
+		gl.glEnd();
+		// gl.glDisable(GL2.GL_TEXTURE_GEN_S); //enable texture coordinate
+		// generation
+		// gl.glDisable(GL2.GL_TEXTURE_GEN_T);
 		gl.glPopMatrix();
 
 		// roof
-		// for (int i = -1; i < 1; i += 2) {
 		gl.glPushMatrix();
 		gl.glColor3f(1f, 1f, 1f);
+		gl.glMatrixMode(GL2.GL_TEXTURE);
+		gl.glLoadIdentity();
+		gl.glMatrixMode(GL2.GL_MODELVIEW);
 		// front side of the roof
 		for (int i = -1; i <= 1; i += 2) {
 			gl.glBegin(GL2.GL_TRIANGLES);
@@ -206,15 +303,30 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 			gl.glVertex3f((16 * i), (i != 1) ? -4f : -41f, 24f);
 			gl.glVertex3f(0f, (i != 1) ? -4f : -41f, 45f);
 			gl.glEnd();
-		
+
 			// sides of the roof
 			gl.glBegin(GL2.GL_QUADS);
+
+			gl.glTexCoord2f(0.9f, 0.9f);
 			gl.glVertex3f((16 * i), (i == 1) ? -42f : -3f, 24f);
+
+			gl.glTexCoord2f(0.9f, 0.1f);
 			gl.glVertex3f((16 * i), (i == 1) ? -3f : -42f, 24f);
+
+			gl.glTexCoord2f(0.1f, 0.1f);
 			gl.glVertex3f(0f, (i == 1) ? -3f : -42f, 45f);
+
+			gl.glTexCoord2f(0.9f, 0.1f);
 			gl.glVertex3f(0f, (i == 1) ? -42f : -3f, 45f);
+
 			gl.glEnd();
+
 		}
+		// komin
+		gl.glPushMatrix();
+		gl.glColor3f(1f, 0f, 0f);
+		gl.glTranslatef(7.5f, -35f, 35f);
+
 //		gl.glBegin(GL2.GL_QUADS);
 //		gl.glVertex3f(-16f, -3f, 24f);
 //		gl.glVertex3f(-16f, -42f, 24f);
@@ -222,15 +334,10 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 //		gl.glVertex3f(0f, -3f, 45f);
 //		gl.glEnd();
 		
-		
-		// komin
-		gl.glPushMatrix();
-		gl.glColor3f(1f, 0f, 0f);
-		gl.glTranslatef(7.5f, -35f, 35f);
 		gl.glScalef(2f, 2f, 4f);
 		glut.glutSolidCube(2);
 		gl.glPopMatrix();
-		
+
 		gl.glPopMatrix();
 		gl.glEndList();
 
@@ -241,12 +348,19 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 		gl.glMatrixMode(GL2.GL_MODELVIEW);
 		gl.glPushMatrix();
 
-		gl.glTranslatef(0f, 2f, 0f);
+		gl.glPushMatrix();
+		gl.glTranslatef(0f, 3f, 0f);
 		gl.glColor3f(1f, 1f, 1f);
-		gl.glScalef(5f, 5f, 10f);
+		gl.glScalef(5f, 5f, 5f);
 		glut.glutSolidCube(1);
+		gl.glPopMatrix();
 
-		gl.glColor3f(1f, 1f, 1f);
+		gl.glPushMatrix();
+		gl.glTranslatef(0f, 3f, -5f);
+		gl.glColor3f(0f, 1f, 0f);
+		gl.glScalef(10f, 5f, 5f);
+		glut.glutSolidCube(1);
+		gl.glPopMatrix();
 
 		gl.glPopMatrix();
 		gl.glEndList();
