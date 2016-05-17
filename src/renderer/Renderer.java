@@ -7,8 +7,6 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
 
 import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
@@ -43,9 +41,13 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 
 	private float alpha = 0;
 
-	List<Texture> textures;
+	Texture texture;
+	Texture skyBoxTexture;
 
 	GLUquadric quadratic;
+
+	float m[] = new float[16];
+	float m1[] = new float[16];
 
 	@Override
 	public void init(GLAutoDrawable drawable) {
@@ -59,20 +61,27 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 		gl.glPolygonMode(GL2.GL_BACK, GL2.GL_FILL);
 
 		OglUtils.printOGLparameters(gl);
-		textures = new ArrayList<Texture>();
+		texture = loadTexture("textura1");
 
+		skyBoxTexture = loadTexture("skybox");
 		// modelovani mlynskeho kola
 		createMillWheel(gl);
 		// modelovani domu
 		createMainBuilding(gl);
-		// createRockWall(gl);
-		// textures.add(loadTexture("rock_wall"));
-		// textures.add(loadTexture("roof"));
+		// nosná kamenná stěna
+		createRockWall(gl);
 
-		// quadratic = glu.gluNewQuadric(); // nova kvadrika
-		// glu.gluQuadricNormals(quadratic, GLU.GLU_SMOOTH); // normaly pro
-		// // stinovani
-		// glu.gluQuadricTexture(quadratic, true); // souradnice do textury
+		quadratic = glu.gluNewQuadric(); // nova kvadrika
+		glu.gluQuadricNormals(quadratic, GLU.GLU_SMOOTH); // normaly pro
+		// stinovani
+		glu.gluQuadricTexture(quadratic, true); // souradnice do textury
+
+		gl.glTexParameteri(GL2.GL_TEXTURE_2D, GL2.GL_TEXTURE_WRAP_T, GL2.GL_REPEAT);
+		gl.glTexParameteri(GL2.GL_TEXTURE_2D, GL2.GL_TEXTURE_WRAP_S, GL2.GL_REPEAT);
+		gl.glTexEnvi(GL2.GL_TEXTURE_ENV, GL2.GL_TEXTURE_ENV_MODE, GL2.GL_REPLACE);
+		gl.glTexParameteri(GL2.GL_TEXTURE_2D, GL2.GL_TEXTURE_MAG_FILTER, GL2.GL_LINEAR);
+		gl.glTexParameteri(GL2.GL_TEXTURE_2D, GL2.GL_TEXTURE_MIN_FILTER, GL2.GL_LINEAR_MIPMAP_LINEAR);
+
 	}
 
 	private Texture loadTexture(String name) {
@@ -107,18 +116,38 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 			alpha += 1;
 
 		gl.glMatrixMode(GL2.GL_MODELVIEW);
+		// gl.glLoadIdentity();
+		//// odsud
+		gl.glPushMatrix();
+
+		gl.glGetFloatv(GL2.GL_MODELVIEW_MATRIX, m1, 0);
 		gl.glLoadIdentity();
+		gl.glRotated(-zenit, 1.0f, 0, 0);
+		gl.glRotated(azimut, 0, 1.0f, 0);
+		// nulujeme posunuti;
+		m1[12] = 0;
+		m1[13] = 0;
+		m1[14] = 0;
+		gl.glMultMatrixf(m1, 0);
+		// skybox
+		skybox(gl);
+		gl.glPopMatrix();
+
+		gl.glLoadIdentity();
+
+		/*
+		 * gl.glRotatef(-zenit,1.0f,0,0); gl.glRotatef(azimut,0,1.0f,0);
+		 * gl.glTranslated(-px,-py,-pz); nebo
+		 */
+//		glu.gluLookAt(px, py, pz, ex + px, ey + py, ez + pz, ux, uy, uz);
+
+		////// sem
+
 		// glu.gluLookAt(50, 0, 0, 0, 0, 0, 0, 0, 1);
 		// glu.gluLookAt(position.x, position.y, position.z, view.x, view.y,
-		// view.z, u.x, u.y, u.z);
-
-		setCameraAngles();
+		 setCameraAngles();
 		gl.glEnable(GL2.GL_TEXTURE_2D);
 		gl.glDisable(GL2.GL_LIGHTING);
-
-		gl.glTexParameteri(GL2.GL_TEXTURE_2D, GL2.GL_TEXTURE_WRAP_T, GL2.GL_REPEAT);
-		gl.glTexParameteri(GL2.GL_TEXTURE_2D, GL2.GL_TEXTURE_WRAP_S, GL2.GL_REPEAT);
-		gl.glTexEnvi(GL2.GL_TEXTURE_ENV, GL2.GL_TEXTURE_ENV_MODE, GL2.GL_REPLACE);
 
 		gl.glTranslatef(0f, 0f, -100f);
 		gl.glRotated(zenit - 90, 1, 0, 0);
@@ -144,6 +173,76 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 		gl.glDisable(GL2.GL_DEPTH_TEST);
 		String legend = "[m] spin the wheel";
 		OglUtils.drawStr2D(drawable, 3, height - 20, legend);
+	}
+
+	private void skybox(GL2 gl) {
+		gl.glColor3d(0.5, 0.5, 0.5);
+		glut.glutWireCube(200); // neni nutne, pouze pro znazorneni tvaru
+								// skyboxu
+
+		gl.glEnable(GL2.GL_TEXTURE_2D);
+		gl.glTexEnvi(GL2.GL_TEXTURE_ENV, GL2.GL_TEXTURE_ENV_MODE, GL2.GL_REPLACE);
+		texture.enable(gl);
+		texture.bind(gl);
+
+		gl.glBegin(GL2.GL_QUADS);
+
+		gl.glTexCoord2f(0.0f, 0.0f);
+		gl.glVertex3d(-2500, -2500, 0f);
+		gl.glTexCoord2f(1.0f, 0.0f);
+		gl.glVertex3d(-2500, 2500, 0f);
+		gl.glTexCoord2f(1.0f, 1.0f);
+		gl.glVertex3d(-2500, 2500, 2500);
+		gl.glTexCoord2f(0.0f, 1.0f);
+		gl.glVertex3d(-2500, -2500, 2500);
+
+		gl.glTexCoord2f(0.0f, 0.0f);
+		gl.glVertex3d(2500, -2500, 0f);
+		gl.glTexCoord2f(1.0f, 0.0f);
+		gl.glVertex3d(2500, 2500, 0f);
+		gl.glTexCoord2f(1.0f, 1.0f);
+		gl.glVertex3d(2500, 2500, 2500);
+		gl.glTexCoord2f(0.0f, 1.0f);
+		gl.glVertex3d(2500, -2500, 2500);
+
+		gl.glTexCoord2f(0.0f, 0.0f);
+		gl.glVertex3d(-2500, -2500, 0f);
+		gl.glTexCoord2f(1.0f, 0.0f);
+		gl.glVertex3d(2500, -2500, 0f);
+		gl.glTexCoord2f(1.0f, 1.0f);
+		gl.glVertex3d(2500, -2500, 2500);
+		gl.glTexCoord2f(0.0f, 1.0f);
+		gl.glVertex3d(-2500, -2500, 2500);
+
+		gl.glTexCoord2f(0.0f, 0.0f);
+		gl.glVertex3d(-2500, 2500, 0f);
+		gl.glTexCoord2f(1.0f, 0.0f);
+		gl.glVertex3d(2500, 2500, 0f);
+		gl.glTexCoord2f(1.0f, 1.0f);
+		gl.glVertex3d(2500, 2500, 2500);
+		gl.glTexCoord2f(0.0f, 1.0f);
+		gl.glVertex3d(-2500, 2500, 2500);
+
+		gl.glTexCoord2f(0.0f, 0.0f);
+		gl.glVertex3d(-2500, 2500, -2500);
+		gl.glTexCoord2f(1.0f, 0.0f);
+		gl.glVertex3d(-2500, -2500, -2500);
+		gl.glTexCoord2f(1.0f, 1.0f);
+		gl.glVertex3d(2500, -2500, -2500);
+		gl.glTexCoord2f(0.0f, 1.0f);
+		gl.glVertex3d(2500, 2500, -2500);
+
+		gl.glTexCoord2f(0.0f, 0.0f);
+		gl.glVertex3d(-2500, 2500, 2500);
+		gl.glTexCoord2f(1.0f, 0.0f);
+		gl.glVertex3d(-2500, -2500, 2500);
+		gl.glTexCoord2f(1.0f, 1.0f);
+		gl.glVertex3d(2500, -2500, 2500);
+		gl.glTexCoord2f(0.0f, 1.0f);
+		gl.glVertex3d(2500, 2500, 2500);
+		gl.glEnd();
+
+		gl.glDisable(GL2.GL_TEXTURE_2D);
 	}
 
 	private void createGround(GL2 gl) {
@@ -190,9 +289,13 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 			gl.glPushMatrix();
 			gl.glColor3f(1f, 0, 0);
 			gl.glBegin(GL2.GL_QUADS);
+			gl.glTexCoord2f(0.5f, 0.99f);
 			gl.glVertex3f(-10, -0.75f, 0.2f);
+			gl.glTexCoord2f(0.25f, 0.99f);
 			gl.glVertex3f(10, -0.75f, 0.2f);
+			gl.glTexCoord2f(0.25f, 0.6f);
 			gl.glVertex3f(10, 0.75f, 0.2f);
+			gl.glTexCoord2f(0.5f, 0.6f);
 			gl.glVertex3f(-10, 0.75f, 0.2f);
 			gl.glEnd();
 			gl.glPopMatrix();
@@ -207,7 +310,7 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 		gl.glPushMatrix();
 		gl.glRotatef(90, 90, 1, 0);
 		gl.glColor3f(1f, 1f, 1f);
-
+		gl.glTexCoord2f(0.27f, 0.61f);
 		glut.glutSolidTorus(1, 11, 2, 8);// obru� 1
 		gl.glTranslatef(0f, 0f, 4f);
 		glut.glutSolidTorus(1, 11, 2, 8); // obru� 2
@@ -231,15 +334,16 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 			gl.glColor3f(1f, 0f, 0f);
 			gl.glBegin(GL2.GL_QUADS);
 
+			gl.glTexCoord2f(0.5f, 0.9f);
 			gl.glVertex3f(-21.0f, 0.0f, -1.3f);
-			gl.glVertex3f(-19.0f, 0.0f, -1.3f);
-			gl.glVertex3f(-19.0f, 0.0f, 0.0f);
+			gl.glTexCoord2f(0.5f, 1f);
 			gl.glVertex3f(-21.0f, 0.0f, 0.0f);
+			gl.glTexCoord2f(0.4f, 1f);
+			gl.glVertex3f(-19.0f, 0.0f, 0.0f);
+			gl.glTexCoord2f(0.4f, 0.9f);
+			gl.glVertex3f(-19.0f, 0.0f, -1.3f);
 
 			gl.glEnd();
-
-			// gl.glScalef(0.14f, 0f, 0.08f);
-			// glut.glutSolidCube(15);
 			gl.glPopMatrix();
 		}
 		gl.glPopMatrix();
@@ -250,44 +354,54 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 		gl.glNewList(2, GL2.GL_COMPILE);
 		gl.glMatrixMode(GL2.GL_MODELVIEW);
 		gl.glPushMatrix();
-		// gl.glTranslatef(0f, -22.5f, 10f);
-		gl.glColor3f(0, 1f, 0);
-		// gl.glScalef(15f, 18f, 15f);
 
-		// gl.glEnable(GL2.GL_TEXTURE_GEN_S); //enable texture coordinate
-		// generation
-		// gl.glEnable(GL2.GL_TEXTURE_GEN_T);
-		// gl.glBindTexture(GL2.GL_TEXTURE_3D, 1);
+		gl.glColor3f(0, 1f, 0);
 
 		gl.glTranslatef(0f, -5f, -6f);
 		// base
 		gl.glBegin(GL2.GL_QUADS);
-		//wheel side
+		gl.glMatrixMode(GL2.GL_TEXTURE);
+		gl.glLoadIdentity();
+		gl.glMatrixMode(GL2.GL_MODELVIEW);
+		// wheel side
+		gl.glTexCoord2f(0.9f, 0.1f);
 		gl.glVertex3f(-15f, 0f, 0f);
-		gl.glVertex3f(15f, 0f, 0f);
-		gl.glVertex3f(15f, 0, 31f);
+		gl.glTexCoord2f(0.9f, 0.55f);
 		gl.glVertex3f(-15f, 0, 31f);
-		//back side
-		gl.glVertex3f(-15f, -35f, 0f);
+		gl.glTexCoord2f(0.78f, 0.55f);
+		gl.glVertex3f(15f, 0, 31f);
+		gl.glTexCoord2f(0.78f, 0.1f);
+		gl.glVertex3f(15f, 0f, 0f);
+		// back side
+		gl.glTexCoord2f(0.25f, 0.1f);
 		gl.glVertex3f(15f, -35f, 0f);
+		gl.glTexCoord2f(0.25f, 0.55f);
 		gl.glVertex3f(15f, -35f, 31f);
+		gl.glTexCoord2f(0f, 0.55f);
 		gl.glVertex3f(-15f, -35f, 31f);
-		
-		//left
+		gl.glTexCoord2f(0f, 0.1f);
+		gl.glVertex3f(-15f, -35f, 0f);
+		// right
 		gl.glColor3f(1f, 0f, 0f);
+		gl.glTexCoord2f(0.55f, 0.1f);
 		gl.glVertex3f(-15, -35f, 0f);
-		gl.glVertex3f(-15f, 0f, 0f);
-		gl.glVertex3f(-15f, 0, 31f);
+		gl.glTexCoord2f(0.55f, 0.55f);
 		gl.glVertex3f(-15f, -35, 31f);
-		//right
-		gl.glVertex3f(15f, -35f, 0f);
+		gl.glTexCoord2f(0.25f, 0.55f);
+		gl.glVertex3f(-15f, 0, 31f);
+		gl.glTexCoord2f(0.25f, 0.1f);
+		gl.glVertex3f(-15f, 0f, 0f);
+		// left
+		gl.glTexCoord2f(0.75f, 0.05f);
 		gl.glVertex3f(15f, 0f, 0f);
+		gl.glTexCoord2f(0.75f, 0.55f);
 		gl.glVertex3f(15f, 0, 31f);
+		gl.glTexCoord2f(0.5f, 0.55f);
 		gl.glVertex3f(15f, -35, 31f);
+		gl.glTexCoord2f(0.5f, 0.05f);
+		gl.glVertex3f(15f, -35f, 0f);
+
 		gl.glEnd();
-		// gl.glDisable(GL2.GL_TEXTURE_GEN_S); //enable texture coordinate
-		// generation
-		// gl.glDisable(GL2.GL_TEXTURE_GEN_T);
 		gl.glPopMatrix();
 
 		// roof
@@ -299,69 +413,205 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 		// front side of the roof
 		for (int i = -1; i <= 1; i += 2) {
 			gl.glBegin(GL2.GL_TRIANGLES);
-			gl.glVertex3f((16 * -i), (i != 1) ? -4f : -41f, 24f);
-			gl.glVertex3f((16 * i), (i != 1) ? -4f : -41f, 24f);
-			gl.glVertex3f(0f, (i != 1) ? -4f : -41f, 45f);
+			gl.glTexCoord2f(0.25f, 0.2f);
+			gl.glVertex3f((16 * i), (i != 1) ? -5f : -40f, 24f);
+			gl.glTexCoord2f(0.125f, 0.6f);
+			gl.glVertex3f(0f, (i != 1) ? -5f : -40f, 45f);
+			gl.glTexCoord2f(0.0f, 0.2f);
+			gl.glVertex3f((16 * -i), (i != 1) ? -5f : -40f, 24f);
 			gl.glEnd();
 
 			// sides of the roof
+			gl.glBindTexture(GL2.GL_TEXTURE_2D, 1);
 			gl.glBegin(GL2.GL_QUADS);
-
-			gl.glTexCoord2f(0.9f, 0.9f);
+			gl.glTexCoord2f(0.26f, 0.9f);
 			gl.glVertex3f((16 * i), (i == 1) ? -42f : -3f, 24f);
-
-			gl.glTexCoord2f(0.9f, 0.1f);
+			gl.glTexCoord2f(0.1f, 0.9f);
 			gl.glVertex3f((16 * i), (i == 1) ? -3f : -42f, 24f);
-
-			gl.glTexCoord2f(0.1f, 0.1f);
+			gl.glTexCoord2f(0.1f, 0.6f);
 			gl.glVertex3f(0f, (i == 1) ? -3f : -42f, 45f);
-
-			gl.glTexCoord2f(0.9f, 0.1f);
+			gl.glTexCoord2f(0.26f, 0.6f);
 			gl.glVertex3f(0f, (i == 1) ? -42f : -3f, 45f);
-
 			gl.glEnd();
 
 		}
-		// komin
-		gl.glPushMatrix();
-		gl.glColor3f(1f, 0f, 0f);
-		gl.glTranslatef(7.5f, -35f, 35f);
-
-//		gl.glBegin(GL2.GL_QUADS);
-//		gl.glVertex3f(-16f, -3f, 24f);
-//		gl.glVertex3f(-16f, -42f, 24f);
-//		gl.glVertex3f(0f, -42f, 45f);
-//		gl.glVertex3f(0f, -3f, 45f);
-//		gl.glEnd();
-		
-		gl.glScalef(2f, 2f, 4f);
-		glut.glutSolidCube(2);
-		gl.glPopMatrix();
+		createChimney(gl);
 
 		gl.glPopMatrix();
 		gl.glEndList();
 
 	}
 
+	private void createChimney(GL2 gl) {
+		// komin
+		gl.glPushMatrix();
+		gl.glColor3f(1f, 0f, 0f);
+		gl.glMatrixMode(GL2.GL_TEXTURE);
+		gl.glLoadIdentity();
+		gl.glMatrixMode(GL2.GL_MODELVIEW);
+		gl.glBegin(GL2.GL_QUADS);
+
+		gl.glTexCoord2f(0.12f, 0.05f);
+		gl.glVertex3f(-9f, -30f, 32f);
+		gl.glTexCoord2f(0.12f, 0.25f);
+		gl.glVertex3f(-9f, -30f, 40f);
+		gl.glTexCoord2f(0.05f, 0.25f);
+		gl.glVertex3f(-9f, -25f, 40f);
+		gl.glTexCoord2f(0.05f, 0.1f);
+		gl.glVertex3f(-9f, -25f, 32f);
+		// back side
+		gl.glTexCoord2f(0.12f, 0.05f);
+		gl.glVertex3f(-4f, -30f, 35f);
+		gl.glTexCoord2f(0.12f, 0.25f);
+		gl.glVertex3f(-4f, -30f, 40f);
+		gl.glTexCoord2f(0.05f, 0.25f);
+		gl.glVertex3f(-4f, -25f, 40f);
+		gl.glTexCoord2f(0.05f, 0.1f);
+		gl.glVertex3f(-4f, -25f, 35f);
+		// front side
+		gl.glTexCoord2f(0.12f, 0.05f);
+		gl.glVertex3f(-9f, -30f, 32f);
+		gl.glTexCoord2f(0.12f, 0.25f);
+		gl.glVertex3f(-9f, -30f, 40f);
+		gl.glTexCoord2f(0.05f, 0.25f);
+		gl.glVertex3f(-4f, -30f, 40f);
+		gl.glTexCoord2f(0.05f, 0.1f);
+		gl.glVertex3f(-4f, -30f, 35f);
+
+		gl.glTexCoord2f(0.12f, 0.05f);
+		gl.glVertex3f(-9f, -25f, 32f);
+		gl.glTexCoord2f(0.12f, 0.25f);
+		gl.glVertex3f(-9f, -25f, 40f);
+		gl.glTexCoord2f(0.05f, 0.25f);
+		gl.glVertex3f(-4f, -25f, 40f);
+		gl.glTexCoord2f(0.05f, 0.1f);
+		gl.glVertex3f(-4f, -25f, 35f);
+
+		// vrsek kominu
+		gl.glTexCoord2f(0.13f, 0.4f);
+		gl.glVertex3f(-9f, -30f, 40f);
+		gl.glTexCoord2f(0.13f, 0.3f);
+		gl.glVertex3f(-4f, -30f, 40f);
+		gl.glTexCoord2f(0.12f, 0.3f);
+		gl.glVertex3f(-4f, -25f, 40f);
+		gl.glTexCoord2f(0.12f, 0.4f);
+		gl.glVertex3f(-9f, -25f, 40f);
+
+		gl.glEnd();
+		gl.glPopMatrix();
+	}
+
 	private void createRockWall(GL2 gl) {
 		gl.glNewList(3, GL2.GL_COMPILE);
 		gl.glMatrixMode(GL2.GL_MODELVIEW);
-		gl.glPushMatrix();
 
 		gl.glPushMatrix();
-		gl.glTranslatef(0f, 3f, 0f);
-		gl.glColor3f(1f, 1f, 1f);
-		gl.glScalef(5f, 5f, 5f);
-		glut.glutSolidCube(1);
-		gl.glPopMatrix();
+		gl.glTranslatef(0f, 1f, -1f);
+		gl.glBegin(GL2.GL_QUADS);
+		// spodni podstavy
+		gl.glTexCoord2f(0.25f, 0.1f);
+		gl.glVertex3f(10f, 5f, 0f);
+		gl.glTexCoord2f(0.25f, 0.3f);
+		gl.glVertex3f(10f, 0f, 0f);
+		gl.glTexCoord2f(0.0f, 0.3f);
+		gl.glVertex3f(-10f, 0f, 0f);
+		gl.glTexCoord2f(0.0f, 0.1f);
+		gl.glVertex3f(-10f, 5f, 0f);
 
-		gl.glPushMatrix();
-		gl.glTranslatef(0f, 3f, -5f);
-		gl.glColor3f(0f, 1f, 0f);
-		gl.glScalef(10f, 5f, 5f);
-		glut.glutSolidCube(1);
-		gl.glPopMatrix();
+		gl.glTexCoord2f(0.25f, 0.1f);
+		gl.glVertex3f(10f, 0f, -5f);
+		gl.glTexCoord2f(0.25f, 0.3f);
+		gl.glVertex3f(10f, 5f, -5f);
+		gl.glTexCoord2f(0.0f, 0.3f);
+		gl.glVertex3f(-10f, 5f, -5f);
+		gl.glTexCoord2f(0.0f, 0.1f);
+		gl.glVertex3f(-10f, 0f, -5f);
 
+		// spodek, stěny
+		gl.glTexCoord2f(0.25f, 0.1f);
+		gl.glVertex3f(10f, 0f, -5f);
+		gl.glTexCoord2f(0.25f, 0.3f);
+		gl.glVertex3f(-10f, 0f, 0f);
+		gl.glTexCoord2f(0.0f, 0.3f);
+		gl.glVertex3f(-10f, 0f, -5f);
+		gl.glTexCoord2f(0.0f, 0.1f);
+		gl.glVertex3f(10f, 0f, 0f);
+
+		gl.glTexCoord2f(0.25f, 0.1f);
+		gl.glVertex3f(10f, 5f, -5f);
+		gl.glTexCoord2f(0.25f, 0.3f);
+		gl.glVertex3f(10f, 5f, 0f);
+		gl.glTexCoord2f(0.0f, 0.3f);
+		gl.glVertex3f(-10f, 5f, 0f);
+		gl.glTexCoord2f(0.0f, 0.1f);
+		gl.glVertex3f(-10f, 5f, -5f);
+
+		gl.glTexCoord2f(0.25f, 0.1f);
+		gl.glVertex3f(10f, 5f, -5f);
+		gl.glTexCoord2f(0.25f, 0.3f);
+		gl.glVertex3f(10f, 0f, -5f);
+		gl.glTexCoord2f(0.0f, 0.3f);
+		gl.glVertex3f(10f, 0f, 0f);
+		gl.glTexCoord2f(0.0f, 0.1f);
+		gl.glVertex3f(10f, 5f, 0f);
+
+		gl.glTexCoord2f(0.25f, 0.1f);
+		gl.glVertex3f(-10f, 5f, -5f);
+		gl.glTexCoord2f(0.25f, 0.3f);
+		gl.glVertex3f(-10f, 0f, -5f);
+		gl.glTexCoord2f(0.0f, 0.3f);
+		gl.glVertex3f(-10f, 0f, 0f);
+		gl.glTexCoord2f(0.0f, 0.1f);
+		gl.glVertex3f(-10f, 5f, 0f);
+
+		// vrchni "kameny"
+		gl.glTexCoord2f(0.25f, 0.1f);
+		gl.glVertex3f(-2.5f, 5f, 5f);
+		gl.glTexCoord2f(0.25f, 0.3f);
+		gl.glVertex3f(-2.5f, 0f, 5f);
+		gl.glTexCoord2f(0.0f, 0.3f);
+		gl.glVertex3f(2.5f, 0f, 5f);
+		gl.glTexCoord2f(0.0f, 0.1f);
+		gl.glVertex3f(2.5f, 5f, 5f);
+
+		// steny vrsku
+		gl.glTexCoord2f(0.25f, 0.1f);
+		gl.glVertex3f(-2.5f, 0f, 0f);
+		gl.glTexCoord2f(0.25f, 0.3f);
+		gl.glVertex3f(-2.5f, 0f, 5f);
+		gl.glTexCoord2f(0.0f, 0.3f);
+		gl.glVertex3f(2.5f, 0f, 5f);
+		gl.glTexCoord2f(0.0f, 0.1f);
+		gl.glVertex3f(2.5f, 0f, 0f);
+
+		gl.glTexCoord2f(0.25f, 0.1f);
+		gl.glVertex3f(2.5f, 5f, 0f);
+		gl.glTexCoord2f(0.25f, 0.3f);
+		gl.glVertex3f(2.5f, 5f, 5f);
+		gl.glTexCoord2f(0.0f, 0.3f);
+		gl.glVertex3f(-2.5f, 5f, 5f);
+		gl.glTexCoord2f(0.0f, 0.1f);
+		gl.glVertex3f(-2.5f, 5f, 0f);
+
+		gl.glTexCoord2f(0.25f, 0.1f);
+		gl.glVertex3f(2.5f, 5f, 0f);
+		gl.glTexCoord2f(0.25f, 0.3f);
+		gl.glVertex3f(2.5f, 5f, 5f);
+		gl.glTexCoord2f(0.0f, 0.3f);
+		gl.glVertex3f(2.5f, 0f, 5f);
+		gl.glTexCoord2f(0.0f, 0.1f);
+		gl.glVertex3f(2.5f, 0f, 0f);
+
+		gl.glTexCoord2f(0.25f, 0.1f);
+		gl.glVertex3f(-2.5f, 5f, 0f);
+		gl.glTexCoord2f(0.25f, 0.3f);
+		gl.glVertex3f(-2.5f, 5f, 5f);
+		gl.glTexCoord2f(0.0f, 0.3f);
+		gl.glVertex3f(-2.5f, 0f, 5f);
+		gl.glTexCoord2f(0.0f, 0.1f);
+		gl.glVertex3f(-2.5f, 0f, 0f);
+
+		gl.glEnd();
 		gl.glPopMatrix();
 		gl.glEndList();
 	}

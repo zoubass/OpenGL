@@ -62,7 +62,7 @@ public class TestRenderer implements GLEventListener, MouseListener,
 		OglUtils.printOGLparameters(gl);
 		
 		System.out.println("Loading texture...");
-		InputStream is = getClass().getResourceAsStream("../rock_wall.jpg"); // vzhledem k adresari res v projektu 
+		InputStream is = getClass().getResourceAsStream("../skybox.jpg"); // vzhledem k adresari res v projektu 
 		if (is == null)
 			System.out.println("File not found");
 		else
