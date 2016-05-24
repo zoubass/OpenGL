@@ -33,11 +33,10 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 
 	private boolean animate = false;
 
-	private Vec3D position;
-	private Vec3D view;
-	private Vec3D u;
+	double ex, ey, ez, px, py, pz, cenx, ceny, cenz, ux, uy, uz;
 
 	private int step = 1;
+	double a_rad, z_rad;
 
 	private float alpha = 0;
 
@@ -139,13 +138,12 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 		 * gl.glRotatef(-zenit,1.0f,0,0); gl.glRotatef(azimut,0,1.0f,0);
 		 * gl.glTranslated(-px,-py,-pz); nebo
 		 */
-//		glu.gluLookAt(px, py, pz, ex + px, ey + py, ez + pz, ux, uy, uz);
+		glu.gluLookAt(px, py, pz, ex + px, ey + py, ez + pz, ux, uy, uz);
 
 		////// sem
 
 		// glu.gluLookAt(50, 0, 0, 0, 0, 0, 0, 0, 1);
 		// glu.gluLookAt(position.x, position.y, position.z, view.x, view.y,
-		 setCameraAngles();
 		gl.glEnable(GL2.GL_TEXTURE_2D);
 		gl.glDisable(GL2.GL_LIGHTING);
 
@@ -186,38 +184,37 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 		texture.bind(gl);
 
 		gl.glBegin(GL2.GL_QUADS);
-
 		gl.glTexCoord2f(0.0f, 0.0f);
-		gl.glVertex3d(-2500, -2500, 0f);
+		gl.glVertex3d(-2500, -2500, -2500);
 		gl.glTexCoord2f(1.0f, 0.0f);
-		gl.glVertex3d(-2500, 2500, 0f);
+		gl.glVertex3d(-2500, 2500, -2500);
 		gl.glTexCoord2f(1.0f, 1.0f);
 		gl.glVertex3d(-2500, 2500, 2500);
 		gl.glTexCoord2f(0.0f, 1.0f);
 		gl.glVertex3d(-2500, -2500, 2500);
 
 		gl.glTexCoord2f(0.0f, 0.0f);
-		gl.glVertex3d(2500, -2500, 0f);
+		gl.glVertex3d(2500, -2500, -2500);
 		gl.glTexCoord2f(1.0f, 0.0f);
-		gl.glVertex3d(2500, 2500, 0f);
+		gl.glVertex3d(2500, 2500, -2500);
 		gl.glTexCoord2f(1.0f, 1.0f);
 		gl.glVertex3d(2500, 2500, 2500);
 		gl.glTexCoord2f(0.0f, 1.0f);
 		gl.glVertex3d(2500, -2500, 2500);
 
 		gl.glTexCoord2f(0.0f, 0.0f);
-		gl.glVertex3d(-2500, -2500, 0f);
+		gl.glVertex3d(-2500, -2500, -2500);
 		gl.glTexCoord2f(1.0f, 0.0f);
-		gl.glVertex3d(2500, -2500, 0f);
+		gl.glVertex3d(2500, -2500, -2500);
 		gl.glTexCoord2f(1.0f, 1.0f);
 		gl.glVertex3d(2500, -2500, 2500);
 		gl.glTexCoord2f(0.0f, 1.0f);
 		gl.glVertex3d(-2500, -2500, 2500);
 
 		gl.glTexCoord2f(0.0f, 0.0f);
-		gl.glVertex3d(-2500, 2500, 0f);
+		gl.glVertex3d(-2500, 2500, -2500);
 		gl.glTexCoord2f(1.0f, 0.0f);
-		gl.glVertex3d(2500, 2500, 0f);
+		gl.glVertex3d(2500, 2500, -2500);
 		gl.glTexCoord2f(1.0f, 1.0f);
 		gl.glVertex3d(2500, 2500, 2500);
 		gl.glTexCoord2f(0.0f, 1.0f);
@@ -273,6 +270,14 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 		azimut = azimut % 360;
 		dx = 0;
 		dy = 0;
+		a_rad = azimut * Math.PI / 180;
+		z_rad = zenit * Math.PI / 180;
+		ex = Math.sin(a_rad) * Math.cos(z_rad);
+		ey = Math.sin(z_rad);
+		ez = -Math.cos(a_rad) * Math.cos(z_rad);
+		ux = Math.sin(a_rad) * Math.cos(z_rad + Math.PI / 2);
+		uy = Math.sin(z_rad + Math.PI / 2);
+		uz = -Math.cos(a_rad) * Math.cos(z_rad + Math.PI / 2);
 	}
 
 	@Override
@@ -623,19 +628,24 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 			animate = !animate;
 			break;
 		case KeyEvent.VK_W:
-			// position.x += view.x * step;
-			// position.y += view.y * step;
-			// position.z += view.z * step;
+			px += ex * step;
+			py += ey * step;
+			pz += ez * step;
 			break;
 		case KeyEvent.VK_S:
-
+			px -= ex * step;
+			py -= ey * step;
+			pz -= ez * step;
 			break;
 		case KeyEvent.VK_A:
 			// position.z -= (Math.cos(azimut - 90)) * step;
 			// position.x += (Math.sin(azimut - 90)) * step;
+			pz -= Math.cos(a_rad - Math.PI / 2) * step;
+			px += Math.sin(a_rad - Math.PI / 2) * step;
 			break;
 		case KeyEvent.VK_D:
-
+			pz += Math.cos(a_rad - Math.PI / 2) * step;
+			px -= Math.sin(a_rad - Math.PI / 2) * step;
 			break;
 		default:
 			break;
@@ -674,6 +684,18 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 		dy = e.getY() - oy;
 		ox = e.getX();
 		oy = e.getY();
+
+//		zenit += dy;
+//		if (zenit > 90)
+//			zenit = 90;
+//		if (zenit <= -90)
+//			zenit = -90;
+//		azimut += dx;
+//		azimut = azimut % 360;
+		
+		setCameraAngles();
+		
+		
 	}
 
 	@Override
