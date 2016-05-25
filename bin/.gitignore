@@ -1,8 +1,6 @@
-/JOGLApp$1.class
-/JOGLApp$2$1.class
-/JOGLApp$2.class
-/JOGLApp.class
-/app/
+/renderer/
+/ground.jpg
+/jogl08_cameraSky/
 /jogl01_start/
 /jogl02_elements/
 /jogl03_transforms/
@@ -10,14 +8,7 @@
 /jogl05_texture/
 /jogl06_pushPopClip/
 /jogl07_viewPort/
-/jogl08_cameraSky/
 /jogl09_objectArrays/
 /jogl10_directionLight/
 /model/
-/renderer/
-/transforms/
 /utils/
-/rock_wall.jpg
-/roof.jpg
-/textura1.jpg
-/skybox.jpg
